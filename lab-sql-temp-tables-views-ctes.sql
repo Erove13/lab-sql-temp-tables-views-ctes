@@ -18,17 +18,18 @@ GROUP BY
 #Step 2: Create a Temporary Table
 #Next, create a Temporary Table that calculates the total amount paid by each customer (total_paid). The Temporary Table should use the rental summary view created in Step 1 to join with the payment table and calculate the total amount paid by each customer.
 
-CREATE TEMPORARY TABLE customer_total_paid AS
-SELECT
+CREATE TEMPORARY TABLE customer_payment_summary AS (
+  SELECT 
     crs.customer_id,
-    crs.customer_name,
-    crs.email,
     SUM(p.amount) AS total_paid
-FROM
-    customer_rental_summary crs
-LEFT JOIN payment p ON crs.customer_id = p.customer_id
-GROUP BY
-    crs.customer_id, crs.customer_name, crs.email;
+  FROM 
+    customer_rental_summary AS crs
+    JOIN rental AS r ON crs.customer_id = r.customer_id
+    JOIN payment AS p ON r.rental_id = p.rental_id
+  GROUP BY 
+    crs.customer_id
+);
+
 
 #Step 3: Create a CTE and the Customer Summary Report
 #Create a CTE that joins the rental summary View with the customer payment summary Temporary Table created in Step 2. The CTE should include the customer's name, email address, rental count, and total amount paid.
@@ -58,7 +59,7 @@ WITH customer_summary AS (
         crs.customer_name,
         crs.email,
         crs.rental_count,
-        ctp.total_paid
+        COALESCE(ctp.total_paid, 0) AS total_paid
     FROM
         customer_rental_summary crs
     LEFT JOIN customer_total_paid ctp ON crs.customer_id = ctp.customer_id
@@ -74,3 +75,4 @@ SELECT
     END AS average_payment_per_rental
 FROM
     customer_summary;
+
